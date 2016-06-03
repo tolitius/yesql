@@ -16,11 +16,12 @@ check, because there may be a newer version available):
 
 |Database|`:dependencies` Entry|
 |---|---|
-|PostgreSQL|`[org.postgresql/postgresql "9.3-1102-jdbc41"]`|
+|PostgreSQL|`[org.postgresql/postgresql "9.4-1201-jdbc41"]`|
 |MySQL|`[mysql/mysql-connector-java "5.1.32"]`|
 |Oracle|`[com.oracle/ojdbc14 "10.2.0.4.0"]`|
 |SQLite|`[org.xerial/sqlite-jdbc "3.7.2"]`|
 |Derby|`[org.apache.derby/derby "10.11.1.1"]`|
+|h2|`[com.h2database/h2 "1.4.191"]`|
 
 (Any database with a JDBC driver should work. If you know of a driver
 that's not listed here, please open a pull request to update this
@@ -65,7 +66,7 @@ query:
 -- name: users-by-country
 SELECT *
 FROM users
-WHERE country_code = :country
+WHERE country_code = :country_code
 ```
 
 ...and then read that file to turn it into a regular Clojure function:
@@ -76,8 +77,8 @@ WHERE country_code = :country
 
 ;;; A function with the name `users-by-country` has been created.
 ;;; Let's use it:
-(users-by-country {:country "GB"})
-;=> ({:name "Kris" :country "GB" ...} ...)
+(users-by-country {:country_code "GB"})
+;=> ({:name "Kris" :country_code "GB" ...} ...)
 ```
 
 By keeping the SQL and Clojure separate you get:
@@ -106,7 +107,7 @@ then you genuinely do need an abstraction layer on top of SQL.
 ### One File, One Query
 
 Create an SQL query. Note we can supply named parameters ([in
-`snake_case`](https://github.com/krisajenkins/yesql/issues/0))
+`snake_case`](https://github.com/krisajenkins/yesql/issues/1))
 and a comment string:
 
 ```sql
@@ -141,7 +142,7 @@ in the REPL:
 
 ;=> -------------------------
 ;=> user/users-by-country
-;=> ([{:keys [country_code]}] 
+;=> ([{:keys [country_code]}]
 ;=>  [{:keys [country_code]} {:keys [connection]}])
 ;=>
 ;=>   Counts the users in a given country.
@@ -151,15 +152,15 @@ Now we can use it:
 
 ```clojure
 ; Use it standalone.
-(users-by-country {:country "GB"})
+(users-by-country {:country_code "GB"})
 ;=> ({:count 58})
 
 ; Use it in a clojure.java.jdbc transaction.
 (require '[clojure.java.jdbc :as jdbc])
 
 (jdbc/with-db-transaction [tx db-spec]
-   {:limeys (users-by-country {:country "GB"} {:connection tx})
-    :yanks  (users-by-country {:country "US"} {:connection tx})})
+   {:limeys (users-by-country {:country_code "GB"} {:connection tx})
+    :yanks  (users-by-country {:country_code "US"} {:connection tx})})
 ```
 
 ### One File, Many Queries
@@ -234,14 +235,14 @@ WHERE (
   OR
   country_code = ?
 )
-AND age < :maxage
+AND age < :max_age
 ```
 
 Supply the `?` parameters as a vector under the `:?` key, like so:
 
 ```clojure
 (young-users-by-country {:? ["GB" "US"]
-                         :maxage 18})
+                         :max_age 18})
 ```
 
 #### Selectively import queries
@@ -287,7 +288,7 @@ And then supply the `IN`-list as a vector, like so:
    {:connection db-spec})
 
 (find-users {:id [1001 1003 1005]
-             :maxage 18})
+             :min_age 18})
 ```
 
 The query will be automatically expanded to `... IN (1001, 1003, 1005)
@@ -389,10 +390,9 @@ Yesql uses the marvellous
 for tests. It's like clojure.test, but has lighter-weight syntax and
 much better failure messages.
 
-Call `lein test` to run the test suite.  
-Call `lein typed check` to run core.typed checking.  
-Call `lein test-all` to run the tests against all (supported) versions of Clojure.  
-Call `lein autoexpect` to automatically re-run the tests as source files change.  
+Call `lein test` to run the test suite.
+Call `lein test-all` to run the tests against all (supported) versions of Clojure.
+Call `lein autoexpect` to automatically re-run the tests as source files change.
 
 ## Other Languages
 
@@ -404,8 +404,12 @@ Yesql has inspired ports to other languages:
 |JavaScript|[sqlt](https://github.com/eugeneware/sqlt)|
 |Python|[Anosql](https://github.com/honza/anosql)|
 |Go|[DotSql](https://github.com/gchaincl/dotsql)|
+|Go|[goyesql](https://github.com/nleof/goyesql)|
 |C#|[JaSql](https://bitbucket.org/rick/jasql)|
+|Ruby|[yayql](https://github.com/gnarmis/yayql)|
+|Erlang|[eql](https://github.com/artemeff/eql)|
 |Clojure|[YeSPARQL](https://github.com/joelkuiper/yesparql)|
+|PHP|[YepSQL](https://github.com/LionsHead/YepSQL)|
 
 ## Status
 
@@ -413,7 +417,7 @@ Ready to use. The API is subject to change. Feedback is welcomed.
 
 ## License
 
-Copyright © 2013-2015 Kris Jenkins
+Copyright © 2013-2016 Kris Jenkins
 
 Distributed under the Eclipse Public License, the same as Clojure.
 
